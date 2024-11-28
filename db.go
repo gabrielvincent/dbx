@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"regexp"
 	"strings"
 	"time"
@@ -104,6 +105,15 @@ func Open(driverName, dsn string) (*DB, error) {
 	}
 
 	return NewFromDB(sqlDB, driverName), nil
+}
+
+// OpenDB opens a database specified by a driver connector, driver name and data source name (DSN).
+// Note that OpenDB does not check if DSN is specified correctly. It doesn't try to establish a DB connection either.
+// Please refer to sql.OpenDB() for more information.
+func OpenDB(connector driver.Connector, driverName string, dsn string) *DB {
+	sqlDB := sql.OpenDB(connector)
+
+	return NewFromDB(sqlDB, driverName)
 }
 
 // MustOpen opens a database and establishes a connection to it.
@@ -225,7 +235,11 @@ func (db *DB) Transactional(f func(*Tx) error) (err error) {
 // TransactionalContext starts a transaction and executes the given function with the given context and transaction options.
 // If the function returns an error, the transaction will be rolled back.
 // Otherwise, the transaction will be committed.
-func (db *DB) TransactionalContext(ctx context.Context, opts *sql.TxOptions, f func(*Tx) error) (err error) {
+func (db *DB) TransactionalContext(
+	ctx context.Context,
+	opts *sql.TxOptions,
+	f func(*Tx) error,
+) (err error) {
 	tx, err := db.BeginTx(ctx, opts)
 	if err != nil {
 		return err
